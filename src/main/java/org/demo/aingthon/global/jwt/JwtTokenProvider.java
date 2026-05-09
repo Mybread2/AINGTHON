@@ -23,9 +23,10 @@ public class JwtTokenProvider {
         this.expirationMs = expirationMs;
     }
 
-    public String generate(String email) {
+    public String generate(String email, String university) {
         return Jwts.builder()
                 .subject(email)
+                .claim("university", university)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + expirationMs))
                 .signWith(signingKey)
@@ -39,6 +40,15 @@ public class JwtTokenProvider {
                 .parseSignedClaims(token)
                 .getPayload()
                 .getSubject();
+    }
+
+    public String extractUniversity(String token) {
+        return Jwts.parser()
+                .verifyWith(signingKey)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .get("university", String.class);
     }
 
     public boolean validate(String token) {

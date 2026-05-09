@@ -43,12 +43,21 @@ cloud-sql-proxy <INSTANCE_CONNECTION_NAME>
 GET /oauth2/authorization/google
 ```
 
-브라우저에서 직접 접속. 구글 로그인 완료 후 JWT 반환.
+브라우저에서 직접 접속. 구글 로그인 완료 후 아래 URL로 리다이렉트된다.
 
-**Response** `200`
+```
+{FRONTEND_URL}/oauth/callback?token=<JWT>
+```
+
+발급된 JWT에는 `email`(subject)과 `university` claim이 포함된다. `university`는 이메일 도메인을 서버에서 해석한 값으로, 프론트에서 변조할 수 없다.
+
 ```json
+// JWT payload 예시 (디코딩)
 {
-  "token": "eyJhbGciOiJIUzI1NiJ9..."
+  "sub": "student@korea.ac.kr",
+  "university": "고려대학교",
+  "iat": 1746748800,
+  "exp": 1747353600
 }
 ```
 
