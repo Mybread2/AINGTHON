@@ -66,6 +66,7 @@ public class UniversityExtractor {
             Map.entry("calvin.ac.kr", "칼빈대학교"),
             // 인천
             Map.entry("inha.ac.kr", "인하대학교"),
+            Map.entry("inha.edu", "인하대학교"),
             Map.entry("inu.ac.kr", "인천대학교"),
             Map.entry("iccu.ac.kr", "인천가톨릭대학교"),
             Map.entry("ginue.ac.kr", "경인교육대학교"),
