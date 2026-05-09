@@ -1,5 +1,8 @@
 package org.demo.aingthon.domain.profile.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.demo.aingthon.domain.auth.entity.User;
 import org.demo.aingthon.domain.profile.dto.ProfileCreateRequest;
@@ -17,6 +20,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+@Tag(name = "Profile", description = "프로필 API")
+@SecurityRequirement(name = "BearerAuth")
 @RestController
 @RequestMapping("/api/profiles")
 public class ProfileController {
@@ -27,6 +32,7 @@ public class ProfileController {
         this.profileService = profileService;
     }
 
+    @Operation(summary = "프로필 목록 검색", description = "키워드·기술스택·같은학교·학년 필터로 프로필을 검색합니다.")
     @GetMapping
     public ResponseEntity<ApiResponse<Page<ProfileResponse>>> searchProfiles(
             @AuthenticationPrincipal User user,
@@ -40,6 +46,7 @@ public class ProfileController {
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
+    @Operation(summary = "프로필 생성")
     @PostMapping
     public ResponseEntity<ApiResponse<ProfileResponse>> createProfile(
             @AuthenticationPrincipal User user,
@@ -48,6 +55,7 @@ public class ProfileController {
         return ResponseEntity.status(201).body(ApiResponse.created(response));
     }
 
+    @Operation(summary = "내 프로필 수정")
     @PutMapping("/me")
     public ResponseEntity<ApiResponse<ProfileResponse>> updateProfile(
             @AuthenticationPrincipal User user,
@@ -56,6 +64,7 @@ public class ProfileController {
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
+    @Operation(summary = "내 프로필 조회")
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<ProfileResponse>> getMyProfile(
             @AuthenticationPrincipal User user) {
@@ -63,6 +72,7 @@ public class ProfileController {
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
+    @Operation(summary = "프로필 조회")
     @GetMapping("/{profileId}")
     public ResponseEntity<ApiResponse<ProfileResponse>> getProfile(
             @PathVariable Long profileId) {
@@ -70,6 +80,7 @@ public class ProfileController {
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
+    @Operation(summary = "프로필 이미지 업로드", description = "multipart/form-data로 이미지 파일을 전송합니다. (key: file)")
     @PutMapping("/me/image")
     public ResponseEntity<ApiResponse<ProfileResponse>> uploadProfileImage(
             @AuthenticationPrincipal User user,
