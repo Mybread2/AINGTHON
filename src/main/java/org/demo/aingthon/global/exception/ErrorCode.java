@@ -20,6 +20,12 @@ public enum ErrorCode {
     PROFILE_ALREADY_EXISTS(HttpStatus.CONFLICT, "P002", "프로필이 이미 존재합니다."),
     REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND, "P003", "리뷰를 찾을 수 없습니다."),
     CANNOT_REVIEW_SELF(HttpStatus.BAD_REQUEST, "P004", "자기 자신에게 리뷰를 작성할 수 없습니다."),
+    FEATURED_REVIEWS_LIMIT_EXCEEDED(HttpStatus.BAD_REQUEST, "P005", "대표 리뷰는 최대 3개까지 설정할 수 있습니다."),
+    REVIEW_NOT_RECEIVED(HttpStatus.BAD_REQUEST, "P006", "받은 리뷰만 대표 리뷰로 설정할 수 있습니다."),
+
+    // ActivityReport
+    REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "RP001", "요약 보고서를 찾을 수 없습니다."),
+    REPORT_UNAUTHORIZED(HttpStatus.FORBIDDEN, "RP002", "해당 요약 보고서에 대한 권한이 없습니다."),
 
     // Match
     MATCH_NOT_FOUND(HttpStatus.NOT_FOUND, "M001", "매칭 신청을 찾을 수 없습니다."),

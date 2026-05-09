@@ -6,8 +6,10 @@ import org.demo.aingthon.domain.profile.dto.ProfileResponse;
 import org.demo.aingthon.domain.profile.dto.ProfileUpdateRequest;
 import org.demo.aingthon.domain.profile.entity.Grade;
 import org.demo.aingthon.domain.profile.entity.Profile;
+import org.demo.aingthon.domain.profile.entity.Review;
 import org.demo.aingthon.domain.profile.repository.ProfileRepository;
 import org.demo.aingthon.domain.profile.repository.ProfileSpecification;
+import org.demo.aingthon.domain.profile.repository.ReviewRepository;
 import org.demo.aingthon.global.exception.BusinessException;
 import org.demo.aingthon.global.exception.ErrorCode;
 import org.springframework.data.domain.Page;
@@ -16,14 +18,18 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 @Transactional(readOnly = true)
 public class ProfileService {
 
     private final ProfileRepository profileRepository;
+    private final ReviewRepository reviewRepository;
 
-    public ProfileService(ProfileRepository profileRepository) {
+    public ProfileService(ProfileRepository profileRepository, ReviewRepository reviewRepository) {
         this.profileRepository = profileRepository;
+        this.reviewRepository = reviewRepository;
     }
 
     @Transactional
@@ -67,6 +73,19 @@ public class ProfileService {
                 request.goal(),
                 request.link()
         );
+
+        if (request.featuredReviewIds() != null) {
+            if (request.featuredReviewIds().size() > 3) {
+                throw new BusinessException(ErrorCode.FEATURED_REVIEWS_LIMIT_EXCEEDED);
+            }
+            List<Review> featured = reviewRepository.findAllById(request.featuredReviewIds());
+            for (Review review : featured) {
+                if (!review.getReviewee().getId().equals(user.getId())) {
+                    throw new BusinessException(ErrorCode.REVIEW_NOT_RECEIVED);
+                }
+            }
+            profile.updateFeaturedReviews(featured);
+        }
 
         return ProfileResponse.from(profile);
     }

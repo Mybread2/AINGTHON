@@ -62,6 +62,14 @@ public class Profile extends BaseEntity {
     @Column
     private String link;
 
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "profile_featured_reviews",
+            joinColumns = @JoinColumn(name = "profile_id"),
+            inverseJoinColumns = @JoinColumn(name = "review_id")
+    )
+    private List<Review> featuredReviews = new ArrayList<>();
+
     protected Profile() {}
 
     public Profile(User user, String name, String introduction, Set<Field> fields,
@@ -98,6 +106,11 @@ public class Profile extends BaseEntity {
         this.link = link;
     }
 
+    public void updateFeaturedReviews(List<Review> reviews) {
+        this.featuredReviews.clear();
+        this.featuredReviews.addAll(reviews);
+    }
+
     public Long getId() { return id; }
     public User getUser() { return user; }
     public String getName() { return name; }
@@ -111,4 +124,5 @@ public class Profile extends BaseEntity {
     public List<String> getProjectExperiences() { return projectExperiences; }
     public String getGoal() { return goal; }
     public String getLink() { return link; }
+    public List<Review> getFeaturedReviews() { return featuredReviews; }
 }

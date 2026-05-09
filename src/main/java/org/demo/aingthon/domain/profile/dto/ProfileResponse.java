@@ -22,6 +22,7 @@ public record ProfileResponse(
         List<String> projectExperiences,
         String goal,
         String link,
+        List<ReviewResponse> featuredReviews,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
@@ -40,6 +41,7 @@ public record ProfileResponse(
                 profile.getProjectExperiences(),
                 profile.getGoal(),
                 profile.getLink(),
+                profile.getFeaturedReviews().stream().map(ReviewResponse::from).toList(),
                 profile.getCreatedAt(),
                 profile.getUpdatedAt()
         );

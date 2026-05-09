@@ -19,5 +19,6 @@ public record ProfileUpdateRequest(
         List<String> careers,
         List<String> projectExperiences,
         String goal,
-        String link
+        String link,
+        List<Long> featuredReviewIds
 ) {}
