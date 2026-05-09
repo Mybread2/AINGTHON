@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URL;
@@ -17,23 +18,33 @@ import java.util.concurrent.TimeUnit;
 @Service
 public class GcsService {
 
-    private final Storage storage;
+    private Storage storage;
     private final String bucketName;
+    private final String credentialsPath;
 
     public GcsService(
             @Value("${gcp.storage.bucket}") String bucketName,
-            @Value("${gcp.credentials.path}") String credentialsPath) {
+            @Value("${gcp.credentials.path:}") String credentialsPath) {
         this.bucketName = bucketName;
-        try {
-            ServiceAccountCredentials credentials = ServiceAccountCredentials.fromStream(
-                    new FileInputStream(credentialsPath));
-            this.storage = StorageOptions.newBuilder()
-                    .setCredentials(credentials)
-                    .build()
-                    .getService();
-        } catch (IOException e) {
-            throw new RuntimeException("GCS 인증 파일 로드 실패: " + credentialsPath, e);
+        this.credentialsPath = credentialsPath;
+    }
+
+    private synchronized Storage storage() {
+        if (storage == null) {
+            try {
+                StorageOptions.Builder builder = StorageOptions.newBuilder();
+                if (credentialsPath != null && !credentialsPath.isBlank()) {
+                    File credFile = new File(credentialsPath);
+                    if (credFile.exists()) {
+                        builder.setCredentials(ServiceAccountCredentials.fromStream(new FileInputStream(credFile)));
+                    }
+                }
+                storage = builder.build().getService();
+            } catch (IOException e) {
+                throw new RuntimeException("GCS 초기화 실패: " + credentialsPath, e);
+            }
         }
+        return storage;
     }
 
     public String upload(MultipartFile file, String folder) {
@@ -43,7 +54,7 @@ public class GcsService {
             BlobInfo blobInfo = BlobInfo.newBuilder(blobId)
                     .setContentType(file.getContentType())
                     .build();
-            storage.create(blobInfo, file.getBytes());
+            storage().create(blobInfo, file.getBytes());
             return objectName;
         } catch (IOException e) {
             throw new BusinessException(ErrorCode.FILE_UPLOAD_FAILED);
@@ -52,7 +63,7 @@ public class GcsService {
 
     public String getSignedUrl(String objectName) {
         if (objectName == null) return null;
-        URL url = storage.signUrl(
+        URL url = storage().signUrl(
                 BlobInfo.newBuilder(BlobId.of(bucketName, objectName)).build(),
                 7, TimeUnit.DAYS,
                 Storage.SignUrlOption.withV4Signature()
@@ -62,7 +73,7 @@ public class GcsService {
 
     public void delete(String objectName) {
         if (objectName != null) {
-            storage.delete(BlobId.of(bucketName, objectName));
+            storage().delete(BlobId.of(bucketName, objectName));
         }
     }
 }

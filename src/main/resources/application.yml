@@ -47,5 +47,5 @@ gcp:
   storage:
     bucket: ${GCP_STORAGE_BUCKET}
   credentials:
-    path: ${GOOGLE_APPLICATION_CREDENTIALS}
+    path: ${GOOGLE_APPLICATION_CREDENTIALS:}
 
