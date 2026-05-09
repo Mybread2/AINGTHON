@@ -53,7 +53,7 @@ public class ProfileService {
                 request.link()
         );
 
-        return ProfileResponse.from(profileRepository.save(profile));
+        return toResponse(profileRepository.save(profile));
     }
 
     @Transactional
@@ -87,19 +87,19 @@ public class ProfileService {
             profile.updateFeaturedReviews(featured);
         }
 
-        return ProfileResponse.from(profile);
+        return toResponse(profile);
     }
 
     public ProfileResponse getProfile(Long profileId) {
         Profile profile = profileRepository.findById(profileId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PROFILE_NOT_FOUND));
-        return ProfileResponse.from(profile);
+        return toResponse(profile);
     }
 
     public ProfileResponse getMyProfile(User user) {
         Profile profile = profileRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.PROFILE_NOT_FOUND));
-        return ProfileResponse.from(profile);
+        return toResponse(profile);
     }
 
     public Page<ProfileResponse> searchProfiles(
@@ -121,6 +121,13 @@ public class ProfileService {
             spec = spec.and(ProfileSpecification.hasGrade(grade));
         }
 
-        return profileRepository.findAll(spec, pageable).map(ProfileResponse::from);
+        return profileRepository.findAll(spec, pageable).map(this::toResponse);
+    }
+
+    private ProfileResponse toResponse(Profile profile) {
+        Long userId = profile.getUser().getId();
+        Double averageRating = reviewRepository.findAverageRatingByRevieweeId(userId);
+        long reviewCount = reviewRepository.countByRevieweeId(userId);
+        return ProfileResponse.from(profile, averageRating, reviewCount);
     }
 }

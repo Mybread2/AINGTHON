@@ -7,7 +7,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public record ReviewCreateRequest(
-        @NotNull Long revieweeId,
+        @NotNull Long scheduleId,
         @NotNull @Min(1) @Max(5) Integer satisfaction,
         @NotBlank @Size(max = 100) String oneLineReview,
         String mainContent

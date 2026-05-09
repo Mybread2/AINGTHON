@@ -2,15 +2,22 @@ package org.demo.aingthon.domain.profile.entity;
 
 import jakarta.persistence.*;
 import org.demo.aingthon.domain.auth.entity.User;
+import org.demo.aingthon.domain.match.entity.Schedule;
 import org.demo.aingthon.global.entity.BaseEntity;
 
 @Entity
-@Table(name = "reviews")
+@Table(name = "reviews", uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"schedule_id", "reviewer_id"})
+})
 public class Review extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "schedule_id", nullable = false)
+    private Schedule schedule;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reviewer_id", nullable = false)
@@ -31,7 +38,9 @@ public class Review extends BaseEntity {
 
     protected Review() {}
 
-    public Review(User reviewer, User reviewee, Integer satisfaction, String oneLineReview, String mainContent) {
+    public Review(Schedule schedule, User reviewer, User reviewee,
+                  Integer satisfaction, String oneLineReview, String mainContent) {
+        this.schedule = schedule;
         this.reviewer = reviewer;
         this.reviewee = reviewee;
         this.satisfaction = satisfaction;
@@ -40,6 +49,7 @@ public class Review extends BaseEntity {
     }
 
     public Long getId() { return id; }
+    public Schedule getSchedule() { return schedule; }
     public User getReviewer() { return reviewer; }
     public User getReviewee() { return reviewee; }
     public Integer getSatisfaction() { return satisfaction; }

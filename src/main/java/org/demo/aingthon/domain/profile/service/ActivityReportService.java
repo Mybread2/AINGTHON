@@ -1,6 +1,8 @@
 package org.demo.aingthon.domain.profile.service;
 
 import org.demo.aingthon.domain.auth.entity.User;
+import org.demo.aingthon.domain.match.entity.Schedule;
+import org.demo.aingthon.domain.match.repository.ScheduleRepository;
 import org.demo.aingthon.domain.profile.dto.ActivityReportCreateRequest;
 import org.demo.aingthon.domain.profile.dto.ActivityReportResponse;
 import org.demo.aingthon.domain.profile.dto.ActivityReportUpdateRequest;
@@ -18,14 +20,28 @@ import java.util.List;
 public class ActivityReportService {
 
     private final ActivityReportRepository activityReportRepository;
+    private final ScheduleRepository scheduleRepository;
 
-    public ActivityReportService(ActivityReportRepository activityReportRepository) {
+    public ActivityReportService(ActivityReportRepository activityReportRepository,
+                                  ScheduleRepository scheduleRepository) {
         this.activityReportRepository = activityReportRepository;
+        this.scheduleRepository = scheduleRepository;
     }
 
     @Transactional
     public ActivityReportResponse createReport(User user, ActivityReportCreateRequest request) {
-        ActivityReport report = new ActivityReport(user, request.insights(), request.nextGoal());
+        Schedule schedule = scheduleRepository.findById(request.scheduleId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.SCHEDULE_NOT_FOUND));
+
+        if (!schedule.getMatch().isParticipant(user.getId())) {
+            throw new BusinessException(ErrorCode.MATCH_NOT_PARTICIPANT);
+        }
+
+        if (activityReportRepository.existsByScheduleIdAndUserId(request.scheduleId(), user.getId())) {
+            throw new BusinessException(ErrorCode.REPORT_ALREADY_EXISTS);
+        }
+
+        ActivityReport report = new ActivityReport(schedule, user, request.insights(), request.nextGoal());
         return ActivityReportResponse.from(activityReportRepository.save(report));
     }
 

@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 
 public record ActivityReportResponse(
         Long id,
+        Long scheduleId,
         Long userId,
         String insights,
         String nextGoal,
@@ -15,6 +16,7 @@ public record ActivityReportResponse(
     public static ActivityReportResponse from(ActivityReport report) {
         return new ActivityReportResponse(
                 report.getId(),
+                report.getSchedule().getId(),
                 report.getUser().getId(),
                 report.getInsights(),
                 report.getNextGoal(),
