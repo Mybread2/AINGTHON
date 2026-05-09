@@ -90,14 +90,15 @@ Spring Boot 3.5.14 REST API, Java 21, Gradle. 루트 패키지: `org.demo.aingth
 ```
 org.demo.aingthon/
   domain/
-    auth/           # 회원가입, 로그인, 학교 이메일 OAuth2 인증
+    auth/           # Google OAuth2 로그인, 대학교 이메일 검증, JWT 발급
     profile/        # 프로필 등록·수정·조회, 분야·학교 필터링, 리뷰 작성·조회, 활동 이력 노출
     match/          # 매칭 신청(Pending→Confirmed→Completed), 신청폼, 최종 일정 확정
     chat/           # 채팅방 생성·메시지 (REST + WebSocket STOMP)
   global/
-    config/         # JpaAuditingConfig, WebSocketConfig 등 설정 빈
+    config/         # JpaAuditingConfig, WebSocketConfig, SecurityConfig
     entity/         # BaseEntity (createdAt, updatedAt)
     exception/      # 예외처리 시스템
+    jwt/            # JwtTokenProvider, JwtAuthenticationFilter
     response/       # 공통 응답 래퍼
 ```
 
@@ -124,6 +125,29 @@ throw new BusinessException(ErrorCode.MATCH_NOT_FOUND, "매칭 ID: " + id);
 새 에러 코드는 `ErrorCode.java`에 도메인 구분 주석 아래 추가한다. 코드 prefix 규칙: `C`(공통) / `A`(Auth) / `P`(Profile) / `M`(Match) / `CH`(Chat).
 
 `@Valid` 검증 실패는 핸들러가 필드별 오류 목록(`FieldError`)을 자동으로 응답에 포함한다.
+
+### 인증 — Google OAuth2 + JWT
+
+**로그인 흐름:**
+```
+GET /oauth2/authorization/google  → 구글 로그인
+                                  → CustomOAuth2UserService (이메일 도메인 검증)
+                                  → .ac.kr / .edu 아니면 A003 에러
+                                  → User 저장 (최초 로그인 시)
+                                  → OAuth2SuccessHandler → JWT 반환
+```
+
+**JWT 사용:**  모든 보호된 API에 헤더 추가
+```
+Authorization: Bearer <token>
+```
+`JwtAuthenticationFilter`가 토큰을 검증하고 `SecurityContext`에 유저를 설정한다.
+
+**공개 엔드포인트 (인증 불필요):** `/oauth2/**`, `/login/**`, `/ws/**`
+
+**JWT 설정** (`.env`):
+- `JWT_SECRET` — 32자 이상 비밀키
+- `jwt.expiration-ms` — 만료 시간 (기본 7일, `application.yml`에서 조정)
 
 ### WebSocket (채팅)
 STOMP 프로토콜 사용. 엔드포인트: `/ws` (SockJS 지원).

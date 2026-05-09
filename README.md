@@ -10,6 +10,7 @@ AI 시대 대학생 개발자 멘토링 커뮤니티. 멘토·멘티로 활동�
 - **Database**: Cloud SQL (PostgreSQL)
 - **Storage**: Cloud Storage (GCS)
 - **Infra**: GCP Cloud Run
+- **인증**: Google OAuth2 + JWT
 - **실시간 통신**: WebSocket (STOMP)
 
 ---
@@ -31,6 +32,43 @@ cloud-sql-proxy <INSTANCE_CONNECTION_NAME>
 ---
 
 ## API 명세
+
+### Auth
+
+#### Google OAuth2 로그인
+
+대학교 이메일(`.ac.kr` / `.edu`)을 사용하는 구글 계정만 가입 가능.
+
+```
+GET /oauth2/authorization/google
+```
+
+브라우저에서 직접 접속. 구글 로그인 완료 후 JWT 반환.
+
+**Response** `200`
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiJ9..."
+}
+```
+
+**Error**
+
+| Code | HTTP | 설명 |
+|------|------|------|
+| A003 | 401 | 대학교 이메일이 아님 (.ac.kr / .edu 필요) |
+
+---
+
+#### 인증이 필요한 API 호출
+
+로그인 후 발급받은 토큰을 모든 요청 헤더에 포함한다.
+
+```
+Authorization: Bearer <token>
+```
+
+---
 
 ### 공통 응답 형식
 
