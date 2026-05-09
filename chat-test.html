@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>채팅 테스트</title>
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client/dist/sockjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/stompjs/lib/stomp.min.js"></script>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 40px auto; }
+    input, button { padding: 8px; margin: 4px; }
+    #messages { border: 1px solid #ccc; height: 300px; overflow-y: auto; padding: 10px; margin-top: 10px; }
+    .msg { margin: 4px 0; }
+  </style>
+</head>
+<body>
+  <h2>채팅 테스트</h2>
+
+  <div>
+    <input id="roomId" type="number" placeholder="roomId" value="1">
+    <input id="senderId" type="number" placeholder="senderId" value="1">
+    <button onclick="connect()">연결</button>
+    <button onclick="disconnect()">끊기</button>
+    <span id="status" style="color:gray">미연결</span>
+  </div>
+
+  <div id="messages"></div>
+
+  <div style="margin-top:10px">
+    <input id="content" type="text" placeholder="메시지 입력" style="width:70%">
+    <button onclick="send()">전송</button>
+  </div>
+
+  <script>
+    let stompClient = null;
+
+    function connect() {
+      if (stompClient && stompClient.connected) stompClient.disconnect();
+      const roomId = document.getElementById('roomId').value;
+      const socket = new SockJS('http://localhost:8080/ws');
+      stompClient = Stomp.over(socket);
+      stompClient.debug = null;
+      stompClient.connect({}, () => {
+        document.getElementById('status').textContent = '연결됨';
+        document.getElementById('status').style.color = 'green';
+        stompClient.subscribe('/sub/chat/room/' + roomId, (msg) => {
+          const body = JSON.parse(msg.body);
+          appendMessage('[' + body.senderId + '] ' + body.content);
+        });
+      });
+    }
+
+    function disconnect() {
+      if (stompClient) stompClient.disconnect();
+      document.getElementById('status').textContent = '미연결';
+      document.getElementById('status').style.color = 'gray';
+    }
+
+    function send() {
+      const roomId = document.getElementById('roomId').value;
+      const senderId = document.getElementById('senderId').value;
+      const content = document.getElementById('content').value;
+      if (!stompClient || !content) return;
+      stompClient.send('/pub/chat/message', {}, JSON.stringify({ roomId, senderId, content }));
+      document.getElementById('content').value = '';
+    }
+
+    function appendMessage(text) {
+      const div = document.createElement('div');
+      div.className = 'msg';
+      div.textContent = text;
+      document.getElementById('messages').appendChild(div);
+    }
+
+    document.getElementById('content').addEventListener('keydown', e => {
+      if (e.key === 'Enter') send();
+    });
+  </script>
+</body>
+</html>

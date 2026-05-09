@@ -89,15 +89,16 @@ Spring Boot 3.5.14 REST API, Java 21, Gradle. 루트 패키지: `org.demo.aingth
 **패키지 구조 (도메인 기반):**
 ```
 org.demo.aingthon/
-  auth/           # 회원가입, 로그인, 학교 이메일 OAuth2 인증
-  profile/        # 프로필 등록·수정·조회, 분야·학교 필터링, 리뷰 작성·조회, 활동 이력 노출
-  match/          # 매칭 신청(Pending→Confirmed→Completed), 신청폼, 최종 일정 확정
-  chat/           # 채팅방 생성·메시지
+  domain/
+    auth/           # 회원가입, 로그인, 학교 이메일 OAuth2 인증
+    profile/        # 프로필 등록·수정·조회, 분야·학교 필터링, 리뷰 작성·조회, 활동 이력 노출
+    match/          # 매칭 신청(Pending→Confirmed→Completed), 신청폼, 최종 일정 확정
+    chat/           # 채팅방 생성·메시지 (REST + WebSocket STOMP)
   global/
-    config/       # JpaAuditingConfig 등 설정 빈
-    entity/       # BaseEntity (createdAt, updatedAt)
-    exception/    # 예외처리 시스템
-    response/     # 공통 응답 래퍼
+    config/         # JpaAuditingConfig, WebSocketConfig 등 설정 빈
+    entity/         # BaseEntity (createdAt, updatedAt)
+    exception/      # 예외처리 시스템
+    response/       # 공통 응답 래퍼
 ```
 
 각 도메인 패키지 내부는 3계층으로 구성: `controller` / `service` / `repository` + `entity` + `dto`
@@ -123,6 +124,18 @@ throw new BusinessException(ErrorCode.MATCH_NOT_FOUND, "매칭 ID: " + id);
 새 에러 코드는 `ErrorCode.java`에 도메인 구분 주석 아래 추가한다. 코드 prefix 규칙: `C`(공통) / `A`(Auth) / `P`(Profile) / `M`(Match) / `CH`(Chat).
 
 `@Valid` 검증 실패는 핸들러가 필드별 오류 목록(`FieldError`)을 자동으로 응답에 포함한다.
+
+### WebSocket (채팅)
+STOMP 프로토콜 사용. 엔드포인트: `/ws` (SockJS 지원).
+
+| 방향 | prefix | 예시 |
+|------|--------|------|
+| 클라이언트 → 서버 발행 | `/pub` | `/pub/chat/message` |
+| 서버 → 클라이언트 구독 | `/sub` | `/sub/chat/room/{roomId}` |
+
+메시지 전송 payload: `{ roomId, senderId, content }`
+채팅방 생성·목록·이전 메시지 조회는 REST API 사용 (`/api/chat`).
+참여자가 아닌 senderId로 메시지 전송 시 `CH002` 예외.
 
 ### JPA Auditing — `BaseEntity`
 모든 엔티티는 `BaseEntity`를 상속한다. `createdAt` / `updatedAt`이 자동으로 채워진다.
