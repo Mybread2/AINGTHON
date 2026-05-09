@@ -9,6 +9,7 @@ import org.demo.aingthon.global.response.ApiResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -50,6 +51,15 @@ public class ActivityReportController {
     public ResponseEntity<ApiResponse<ActivityReportResponse>> getReport(
             @PathVariable Long reportId) {
         ActivityReportResponse response = activityReportService.getReport(reportId);
+        return ResponseEntity.ok(ApiResponse.ok(response));
+    }
+
+    @PostMapping("/{reportId}/attachment")
+    public ResponseEntity<ApiResponse<ActivityReportResponse>> uploadAttachment(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long reportId,
+            @RequestParam("file") MultipartFile file) {
+        ActivityReportResponse response = activityReportService.uploadAttachment(user, reportId, file);
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 }

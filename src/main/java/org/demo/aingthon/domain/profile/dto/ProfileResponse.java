@@ -22,13 +22,14 @@ public record ProfileResponse(
         List<String> projectExperiences,
         String goal,
         String link,
+        String profileImageUrl,
         List<ReviewResponse> featuredReviews,
         Double averageRating,
         long reviewCount,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
-    public static ProfileResponse from(Profile profile, Double averageRating, long reviewCount) {
+    public static ProfileResponse from(Profile profile, Double averageRating, long reviewCount, String profileImageUrl) {
         return new ProfileResponse(
                 profile.getId(),
                 profile.getUser().getId(),
@@ -43,6 +44,7 @@ public record ProfileResponse(
                 profile.getProjectExperiences(),
                 profile.getGoal(),
                 profile.getLink(),
+                profileImageUrl,
                 profile.getFeaturedReviews().stream().map(ReviewResponse::from).toList(),
                 averageRating != null ? Math.round(averageRating * 10) / 10.0 : null,
                 reviewCount,

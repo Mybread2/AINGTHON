@@ -62,6 +62,9 @@ public class Profile extends BaseEntity {
     @Column
     private String link;
 
+    @Column(name = "profile_image_object_name")
+    private String profileImageObjectName;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "profile_featured_reviews",
@@ -125,4 +128,9 @@ public class Profile extends BaseEntity {
     public String getGoal() { return goal; }
     public String getLink() { return link; }
     public List<Review> getFeaturedReviews() { return featuredReviews; }
+    public String getProfileImageObjectName() { return profileImageObjectName; }
+
+    public void updateProfileImage(String profileImageObjectName) {
+        this.profileImageObjectName = profileImageObjectName;
+    }
 }
