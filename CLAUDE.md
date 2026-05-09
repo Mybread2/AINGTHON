@@ -133,9 +133,13 @@ throw new BusinessException(ErrorCode.MATCH_NOT_FOUND, "매칭 ID: " + id);
 GET /oauth2/authorization/google  → 구글 로그인
                                   → CustomOAuth2UserService (이메일 도메인 검증)
                                   → .ac.kr / .edu 아니면 A003 에러
-                                  → User 저장 (최초 로그인 시)
-                                  → OAuth2SuccessHandler → JWT 반환
+                                  → UniversityExtractor로 이메일 도메인 → 대학교 이름 변환
+                                  → User 저장 (최초 로그인 시, university 포함)
+                                  → OAuth2SuccessHandler → JWT 발급 후 프론트 리다이렉트
+                                  → {FRONTEND_URL}/oauth/callback?token=<JWT>
 ```
+
+**JWT payload:**  `email` (subject) + `university` claim 포함. 서명된 토큰이므로 프론트에서 변조 불가.
 
 **JWT 사용:**  모든 보호된 API에 헤더 추가
 ```
@@ -147,7 +151,11 @@ Authorization: Bearer <token>
 
 **JWT 설정** (`.env`):
 - `JWT_SECRET` — 32자 이상 비밀키
+- `FRONTEND_URL` — OAuth2 로그인 완료 후 리다이렉트할 프론트 URL (예: `http://localhost:3000`)
 - `jwt.expiration-ms` — 만료 시간 (기본 7일, `application.yml`에서 조정)
+
+**대학교 이름 추출 — `UniversityExtractor`:**  
+`domain/auth/util/UniversityExtractor.java`에서 이메일 도메인 → 대학교 이름을 서버 사이드에서 결정한다. 서울·경기·인천 지역 65개 대학 매핑 포함. 미등록 도메인은 도메인 문자열 그대로 반환. 새 대학교 추가 시 이 파일의 `DOMAIN_MAP`에 항목을 추가한다.
 
 ### WebSocket (채팅)
 STOMP 프로토콜 사용. 엔드포인트: `/ws` (SockJS 지원).

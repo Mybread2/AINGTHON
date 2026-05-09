@@ -4,6 +4,7 @@ import org.demo.aingthon.domain.auth.dto.OAuth2UserInfo;
 import org.demo.aingthon.domain.auth.entity.Role;
 import org.demo.aingthon.domain.auth.entity.User;
 import org.demo.aingthon.domain.auth.repository.UserRepository;
+import org.demo.aingthon.domain.auth.util.UniversityExtractor;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
@@ -36,8 +37,9 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             );
         }
 
+        String university = UniversityExtractor.extract(email);
         User user = userRepository.findByEmail(email)
-                .orElseGet(() -> userRepository.save(new User(email, userInfo.name(), Role.USER)));
+                .orElseGet(() -> userRepository.save(new User(email, userInfo.name(), university, Role.USER)));
 
         return new DefaultOAuth2User(
                 Collections.singleton(() -> user.getRole().name()),
