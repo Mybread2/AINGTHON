@@ -40,7 +40,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         String token = jwtTokenProvider.generate(email, user.getUniversity());
         String university = user.getUniversity();
 
-        String redirectUrl = frontendUrl + "/oauth/callback"
+        String redirectUrl = frontendUrl + "/oauth/callback.html"
                 + "?token=" + URLEncoder.encode(token, StandardCharsets.UTF_8)
                 + "&university=" + URLEncoder.encode(university, StandardCharsets.UTF_8);
         response.sendRedirect(redirectUrl);
