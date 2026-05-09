@@ -15,6 +15,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/profiles")
@@ -66,6 +67,14 @@ public class ProfileController {
     public ResponseEntity<ApiResponse<ProfileResponse>> getProfile(
             @PathVariable Long profileId) {
         ProfileResponse response = profileService.getProfile(profileId);
+        return ResponseEntity.ok(ApiResponse.ok(response));
+    }
+
+    @PutMapping("/me/image")
+    public ResponseEntity<ApiResponse<ProfileResponse>> uploadProfileImage(
+            @AuthenticationPrincipal User user,
+            @RequestParam("file") MultipartFile file) {
+        ProfileResponse response = profileService.uploadProfileImage(user, file);
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 }

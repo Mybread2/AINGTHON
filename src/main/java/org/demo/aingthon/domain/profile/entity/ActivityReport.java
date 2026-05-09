@@ -29,6 +29,9 @@ public class ActivityReport extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String nextGoal;
 
+    @Column(name = "attachment_object_name")
+    private String attachmentObjectName;
+
     protected ActivityReport() {}
 
     public ActivityReport(Schedule schedule, User user, String insights, String nextGoal) {
@@ -43,9 +46,14 @@ public class ActivityReport extends BaseEntity {
         this.nextGoal = nextGoal;
     }
 
+    public void updateAttachment(String attachmentObjectName) {
+        this.attachmentObjectName = attachmentObjectName;
+    }
+
     public Long getId() { return id; }
     public Schedule getSchedule() { return schedule; }
     public User getUser() { return user; }
     public String getInsights() { return insights; }
     public String getNextGoal() { return nextGoal; }
+    public String getAttachmentObjectName() { return attachmentObjectName; }
 }

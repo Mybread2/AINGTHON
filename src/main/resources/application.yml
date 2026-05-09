@@ -28,6 +28,11 @@ spring:
               - email
               - profile
 
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
 jwt:
   secret: ${JWT_SECRET}
   expiration-ms: 604800000  # 7일
@@ -37,3 +42,10 @@ server:
 
 app:
   frontend-url: ${FRONTEND_URL}
+
+gcp:
+  storage:
+    bucket: ${GCP_STORAGE_BUCKET}
+  credentials:
+    path: ${GOOGLE_APPLICATION_CREDENTIALS}
+

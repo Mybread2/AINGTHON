@@ -12,11 +12,13 @@ import org.demo.aingthon.domain.profile.repository.ProfileSpecification;
 import org.demo.aingthon.domain.profile.repository.ReviewRepository;
 import org.demo.aingthon.global.exception.BusinessException;
 import org.demo.aingthon.global.exception.ErrorCode;
+import org.demo.aingthon.global.storage.GcsService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -26,10 +28,12 @@ public class ProfileService {
 
     private final ProfileRepository profileRepository;
     private final ReviewRepository reviewRepository;
+    private final GcsService gcsService;
 
-    public ProfileService(ProfileRepository profileRepository, ReviewRepository reviewRepository) {
+    public ProfileService(ProfileRepository profileRepository, ReviewRepository reviewRepository, GcsService gcsService) {
         this.profileRepository = profileRepository;
         this.reviewRepository = reviewRepository;
+        this.gcsService = gcsService;
     }
 
     @Transactional
@@ -124,10 +128,25 @@ public class ProfileService {
         return profileRepository.findAll(spec, pageable).map(this::toResponse);
     }
 
+    @Transactional
+    public ProfileResponse uploadProfileImage(User user, MultipartFile file) {
+        Profile profile = profileRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.PROFILE_NOT_FOUND));
+
+        if (profile.getProfileImageObjectName() != null) {
+            gcsService.delete(profile.getProfileImageObjectName());
+        }
+
+        String objectName = gcsService.upload(file, "profiles/" + user.getId());
+        profile.updateProfileImage(objectName);
+        return toResponse(profile);
+    }
+
     private ProfileResponse toResponse(Profile profile) {
         Long userId = profile.getUser().getId();
         Double averageRating = reviewRepository.findAverageRatingByRevieweeId(userId);
         long reviewCount = reviewRepository.countByRevieweeId(userId);
-        return ProfileResponse.from(profile, averageRating, reviewCount);
+        String profileImageUrl = gcsService.getSignedUrl(profile.getProfileImageObjectName());
+        return ProfileResponse.from(profile, averageRating, reviewCount, profileImageUrl);
     }
 }

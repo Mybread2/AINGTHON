@@ -10,8 +10,10 @@ import org.demo.aingthon.domain.profile.entity.ActivityReport;
 import org.demo.aingthon.domain.profile.repository.ActivityReportRepository;
 import org.demo.aingthon.global.exception.BusinessException;
 import org.demo.aingthon.global.exception.ErrorCode;
+import org.demo.aingthon.global.storage.GcsService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -21,11 +23,14 @@ public class ActivityReportService {
 
     private final ActivityReportRepository activityReportRepository;
     private final ScheduleRepository scheduleRepository;
+    private final GcsService gcsService;
 
     public ActivityReportService(ActivityReportRepository activityReportRepository,
-                                  ScheduleRepository scheduleRepository) {
+                                  ScheduleRepository scheduleRepository,
+                                  GcsService gcsService) {
         this.activityReportRepository = activityReportRepository;
         this.scheduleRepository = scheduleRepository;
+        this.gcsService = gcsService;
     }
 
     @Transactional
@@ -42,7 +47,7 @@ public class ActivityReportService {
         }
 
         ActivityReport report = new ActivityReport(schedule, user, request.insights(), request.nextGoal());
-        return ActivityReportResponse.from(activityReportRepository.save(report));
+        return toResponse(activityReportRepository.save(report));
     }
 
     @Transactional
@@ -55,18 +60,41 @@ public class ActivityReportService {
         }
 
         report.update(request.insights(), request.nextGoal());
-        return ActivityReportResponse.from(report);
+        return toResponse(report);
+    }
+
+    @Transactional
+    public ActivityReportResponse uploadAttachment(User user, Long reportId, MultipartFile file) {
+        ActivityReport report = activityReportRepository.findById(reportId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.REPORT_NOT_FOUND));
+
+        if (!report.getUser().getId().equals(user.getId())) {
+            throw new BusinessException(ErrorCode.REPORT_UNAUTHORIZED);
+        }
+
+        if (report.getAttachmentObjectName() != null) {
+            gcsService.delete(report.getAttachmentObjectName());
+        }
+
+        String objectName = gcsService.upload(file, "reports/" + reportId);
+        report.updateAttachment(objectName);
+        return toResponse(report);
     }
 
     public List<ActivityReportResponse> getMyReports(User user) {
         return activityReportRepository.findByUserId(user.getId()).stream()
-                .map(ActivityReportResponse::from)
+                .map(this::toResponse)
                 .toList();
     }
 
     public ActivityReportResponse getReport(Long reportId) {
         ActivityReport report = activityReportRepository.findById(reportId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.REPORT_NOT_FOUND));
-        return ActivityReportResponse.from(report);
+        return toResponse(report);
+    }
+
+    private ActivityReportResponse toResponse(ActivityReport report) {
+        String attachmentUrl = gcsService.getSignedUrl(report.getAttachmentObjectName());
+        return ActivityReportResponse.from(report, attachmentUrl);
     }
 }
