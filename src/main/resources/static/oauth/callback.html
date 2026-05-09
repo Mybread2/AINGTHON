@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>로그인 중...</title></head>
+<body>
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('token');
+  const university = params.get('university');
+  if (token) {
+    localStorage.setItem('token', token);
+    localStorage.setItem('university', university || '');
+    window.location.href = '/index.html';
+  } else {
+    document.body.innerText = '로그인 실패: 토큰이 없습니다.';
+  }
+</script>
+</body>
+</html>

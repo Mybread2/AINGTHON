@@ -82,7 +82,7 @@ Spring Boot 3.5.14 REST API, Java 21, Gradle. 루트 패키지: `org.demo.aingth
 - `spring-boot-starter-validation` — 요청 유효성 검사
 
 **인프라 (GCP 중심):**
-- **Database**: Cloud SQL (PostgreSQL) — 로컬 개발 시 Cloud SQL Auth Proxy로 연결
+- **Database**: Cloud SQL (PostgreSQL) — 로컬 개발 시 Docker Compose PostgreSQL (포트 5433) 사용
 - **File Storage**: Cloud Storage (GCS) — 프로필 사진 등 유저 업로드 파일, Signed URL로 접근 제어
 - **Secret 관리**: Secret Manager — DB 비밀번호, OAuth 클라이언트 시크릿 등 민감 정보 관리
 
@@ -136,7 +136,7 @@ GET /oauth2/authorization/google  → 구글 로그인
                                   → UniversityExtractor로 이메일 도메인 → 대학교 이름 변환
                                   → User 저장 (최초 로그인 시, university 포함)
                                   → OAuth2SuccessHandler → JWT 발급 후 프론트 리다이렉트
-                                  → {FRONTEND_URL}/oauth/callback?token=<JWT>
+                                  → {FRONTEND_URL}/oauth/callback.html?token=<JWT>&university=<대학교명>
 ```
 
 **JWT payload:**  `email` (subject) + `university` claim 포함. 서명된 토큰이므로 프론트에서 변조 불가.
@@ -147,7 +147,7 @@ Authorization: Bearer <token>
 ```
 `JwtAuthenticationFilter`가 토큰을 검증하고 `SecurityContext`에 유저를 설정한다.
 
-**공개 엔드포인트 (인증 불필요):** `/oauth2/**`, `/login/**`, `/ws/**`
+**공개 엔드포인트 (인증 불필요):** `/oauth2/**`, `/login/**`, `/ws/**`, `/oauth/**`, `/`, `/index.html`, `/chat-test.html`
 
 **JWT 설정** (`.env`):
 - `JWT_SECRET` — 32자 이상 비밀키
@@ -156,6 +156,33 @@ Authorization: Bearer <token>
 
 **대학교 이름 추출 — `UniversityExtractor`:**  
 `domain/auth/util/UniversityExtractor.java`에서 이메일 도메인 → 대학교 이름을 서버 사이드에서 결정한다. 서울·경기·인천 지역 65개 대학 매핑 포함. 미등록 도메인은 도메인 문자열 그대로 반환. 새 대학교 추가 시 이 파일의 `DOMAIN_MAP`에 항목을 추가한다.
+
+### Match 도메인
+
+**상태 흐름:** `PENDING` → `APPROVED` / `REJECTED`  
+승인·거절은 `receiverId` 본인만 가능. `PENDING`이 아닌 상태에서 호출 시 M004.
+
+**채팅방 자동 생성:** `POST /api/matches` 호출 시 `ChatService.createRoom()`을 내부적으로 호출하여 채팅방을 함께 생성한다. 응답에 `chatRoomId`가 포함된다.
+
+**일정 관리:**
+- `APPROVED` 상태 매칭에서만 일정 제안 가능
+- 일정은 매칭당 하나만 유지 (재제안 시 덮어씀)
+- 양쪽 참여자 모두 일정 수정 가능
+- `Schedule.isPast()` 기준으로 수정 제한 — `LocalDateTime.of(scheduledDate, scheduledTime).isBefore(LocalDateTime.now())`
+
+**에러 코드:**
+
+| Code | 설명 |
+|------|------|
+| M001 | 매칭 없음 |
+| M002 | 이미 PENDING 신청 존재 |
+| M003 | 자기 자신에게 신청 |
+| M004 | 현재 상태에서 허용되지 않는 작업 |
+| M005 | 매칭 참여자가 아님 |
+| M006 | 일정 없음 |
+| M007 | 이미 지난 일정 수정 불가 |
+
+---
 
 ### WebSocket (채팅)
 STOMP 프로토콜 사용. 엔드포인트: `/ws` (SockJS 지원).
@@ -176,12 +203,23 @@ STOMP 프로토콜 사용. 엔드포인트: `/ws` (SockJS 지원).
 public class User extends BaseEntity { ... }
 ```
 
-애플리케이션 설정은 `src/main/resources/application.yaml`. 환경별 오버라이드는 `application-dev.yaml` / `application-prod.yaml` + `spring.profiles.active`.
+애플리케이션 설정은 `src/main/resources/application.yml`. `ddl-auto: update`로 서버 재시작 시 스키마가 유지된다.
 
 환경변수는 `.env` 파일로 관리한다 (`spring-dotenv` 라이브러리가 자동 로드). `.env.example`을 복사해 `.env`를 만들고 값을 채운다. `.env`는 `.gitignore`에 포함되어야 한다.
 
-로컬 개발 시 Cloud SQL 연결은 Cloud SQL Auth Proxy를 사용한다:
+로컬 개발 DB는 Docker Compose로 실행한다:
 ```bash
-cloud-sql-proxy <INSTANCE_CONNECTION_NAME>
-# 이후 DB_URL=jdbc:postgresql://localhost:5432/aingthon 으로 접속
+docker-compose up -d
+# DB_URL=jdbc:postgresql://localhost:5433/aingthon
 ```
+
+> Docker 볼륨은 최초 생성 시 비밀번호가 고정된다. `POSTGRES_PASSWORD`를 변경해도 볼륨의 실제 비밀번호는 바뀌지 않으므로, 비밀번호 불일치 시 `ALTER USER postgres PASSWORD '...'`로 직접 재설정한다.
+
+### 테스트 UI
+`src/main/resources/static/`에 브라우저용 테스트 페이지가 있다.
+
+| 경로 | 설명 |
+|------|------|
+| `/index.html` | 로그인, 매칭 신청/승인, 일정 관리 |
+| `/oauth/callback.html` | OAuth2 콜백 처리 (token → localStorage) |
+| `/chat-test.html` | WebSocket STOMP 채팅 테스트 |

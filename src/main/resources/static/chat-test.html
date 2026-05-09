@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>채팅 테스트</title>
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, sans-serif; background: #f5f5f5; color: #333; }
+    header { background: #2563eb; color: white; padding: 16px 24px; }
+    header h1 { font-size: 18px; }
+    .container { max-width: 700px; margin: 24px auto; padding: 0 16px; display: flex; flex-direction: column; gap: 16px; }
+    .card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    label { display: block; font-size: 12px; color: #666; margin-bottom: 4px; margin-top: 10px; }
+    input { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; }
+    .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; }
+    .btn-primary { background: #2563eb; color: white; }
+    .btn-danger  { background: #dc2626; color: white; }
+    .btn-success { background: #16a34a; color: white; }
+    .btn-row { display: flex; gap: 8px; margin-top: 12px; }
+    #status { font-size: 13px; padding: 6px 10px; border-radius: 6px; background: #fee2e2; color: #991b1b; margin-top: 10px; }
+    #status.connected { background: #d1fae5; color: #065f46; }
+    #messages { height: 300px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: #f9fafb; margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+    .msg { font-size: 13px; }
+    .msg .sender { font-weight: 600; color: #1e40af; }
+    .msg .time { font-size: 11px; color: #9ca3af; margin-left: 6px; }
+    .msg .content { margin-top: 2px; }
+    .msg.mine .sender { color: #065f46; }
+    .send-row { display: flex; gap: 8px; margin-top: 8px; }
+    .send-row input { flex: 1; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>💬 채팅 테스트</h1>
+</header>
+
+<div class="container">
+  <div class="card">
+    <h2 style="font-size:15px;font-weight:600;color:#1e40af;margin-bottom:8px">채팅방 생성</h2>
+    <label>유저 1 ID</label>
+    <input type="number" id="user1Id" placeholder="user1Id">
+    <label>유저 2 ID</label>
+    <input type="number" id="user2Id" placeholder="user2Id">
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="createRoom()">채팅방 생성 / 조회</button>
+    </div>
+    <div id="room-result" style="margin-top:10px;font-size:13px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:10px;display:none;"></div>
+  </div>
+
+  <div class="card">
+    <h2 style="font-size:15px;font-weight:600;color:#1e40af;margin-bottom:8px">연결</h2>
+    <label>채팅방 ID</label>
+    <input type="number" id="roomId" placeholder="roomId">
+    <label>내 유저 ID (senderId)</label>
+    <input type="number" id="senderId" placeholder="senderId">
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="connect()">연결</button>
+      <button class="btn btn-danger" onclick="disconnect()">연결 끊기</button>
+    </div>
+    <div id="status">연결되지 않음</div>
+  </div>
+
+  <div class="card">
+    <h2 style="font-size:15px;font-weight:600;color:#1e40af;margin-bottom:8px">메시지</h2>
+    <div id="messages"></div>
+    <div class="send-row">
+      <input type="text" id="msgInput" placeholder="메시지 입력..." onkeydown="if(event.key==='Enter') sendMessage()">
+      <button class="btn btn-success" onclick="sendMessage()">전송</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const token = localStorage.getItem('token');
+  let stompClient = null;
+
+  function connect() {
+    const roomId = document.getElementById('roomId').value;
+    if (!roomId) { alert('채팅방 ID를 입력하세요.'); return; }
+
+    const socket = new SockJS('/ws');
+    stompClient = Stomp.over(socket);
+    stompClient.debug = null;
+
+    const headers = token ? { 'Authorization': 'Bearer ' + token } : {};
+
+    stompClient.connect(headers, () => {
+      setStatus(true);
+      loadHistory(roomId);
+
+      stompClient.subscribe('/sub/chat/room/' + roomId, (frame) => {
+        const msg = JSON.parse(frame.body);
+        appendMessage(msg);
+      });
+    }, (err) => {
+      setStatus(false);
+      console.error('STOMP error', err);
+    });
+  }
+
+  function disconnect() {
+    if (stompClient) {
+      stompClient.disconnect();
+      stompClient = null;
+    }
+    setStatus(false);
+  }
+
+  function sendMessage() {
+    const roomId = document.getElementById('roomId').value;
+    const senderId = document.getElementById('senderId').value;
+    const content = document.getElementById('msgInput').value.trim();
+
+    if (!stompClient || !stompClient.connected) { alert('먼저 연결하세요.'); return; }
+    if (!content) return;
+    if (!senderId) { alert('유저 ID를 입력하세요.'); return; }
+
+    stompClient.send('/pub/chat/message', {}, JSON.stringify({ roomId: Number(roomId), senderId: Number(senderId), content }));
+    document.getElementById('msgInput').value = '';
+  }
+
+  async function loadHistory(roomId) {
+    const headers = token ? { 'Authorization': 'Bearer ' + token } : {};
+    const res = await fetch('/api/chat/rooms/' + roomId + '/messages', { headers });
+    const json = await res.json();
+    if (json.data?.length) {
+      document.getElementById('messages').innerHTML = '';
+      json.data.forEach(appendMessage);
+    }
+  }
+
+  function appendMessage(msg) {
+    const myId = Number(document.getElementById('senderId').value);
+    const isMine = msg.senderId === myId;
+    const time = new Date(msg.sentAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+    const div = document.createElement('div');
+    div.className = 'msg' + (isMine ? ' mine' : '');
+    div.innerHTML = `<span class="sender">유저 #${msg.senderId}</span><span class="time">${time}</span><div class="content">${escapeHtml(msg.content)}</div>`;
+    const box = document.getElementById('messages');
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  async function createRoom() {
+    const user1Id = document.getElementById('user1Id').value;
+    const user2Id = document.getElementById('user2Id').value;
+    if (!user1Id || !user2Id) { alert('두 유저 ID를 모두 입력하세요.'); return; }
+
+    const res = await fetch(`/api/chat/rooms?user1Id=${user1Id}&user2Id=${user2Id}`, {
+      method: 'POST',
+      headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+    });
+    const json = await res.json();
+    const el = document.getElementById('room-result');
+    el.style.display = 'block';
+    if (json.data) {
+      el.textContent = `채팅방 ID: ${json.data.id} (user1: ${json.data.user1Id}, user2: ${json.data.user2Id})`;
+      document.getElementById('roomId').value = json.data.id;
+    } else {
+      el.textContent = JSON.stringify(json);
+    }
+  }
+
+  function setStatus(connected) {
+    const el = document.getElementById('status');
+    el.textContent = connected ? '연결됨' : '연결되지 않음';
+    el.className = connected ? 'connected' : '';
+  }
+</script>
+</body>
+</html>

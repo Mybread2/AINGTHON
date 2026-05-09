@@ -26,6 +26,9 @@ public enum ErrorCode {
     MATCH_ALREADY_PENDING(HttpStatus.CONFLICT, "M002", "이미 신청 중인 매칭이 있습니다."),
     CANNOT_MATCH_SELF(HttpStatus.BAD_REQUEST, "M003", "자기 자신에게 매칭을 신청할 수 없습니다."),
     INVALID_MATCH_STATUS(HttpStatus.BAD_REQUEST, "M004", "현재 상태에서 허용되지 않는 작업입니다."),
+    MATCH_NOT_PARTICIPANT(HttpStatus.FORBIDDEN, "M005", "매칭 참여자가 아닙니다."),
+    SCHEDULE_NOT_FOUND(HttpStatus.NOT_FOUND, "M006", "일정을 찾을 수 없습니다."),
+    SCHEDULE_ALREADY_PASSED(HttpStatus.BAD_REQUEST, "M007", "이미 지난 일정은 수정할 수 없습니다."),
 
     // Chat
     CHAT_ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "CH001", "채팅방을 찾을 수 없습니다."),

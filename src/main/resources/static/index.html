@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>Aingthon 테스트</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, sans-serif; background: #f5f5f5; color: #333; }
+    header { background: #2563eb; color: white; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
+    header h1 { font-size: 18px; }
+    #user-info { font-size: 13px; }
+    .logout-btn { background: rgba(255,255,255,0.2); border: none; color: white; padding: 6px 12px; border-radius: 6px; cursor: pointer; margin-left: 12px; }
+    .container { max-width: 900px; margin: 24px auto; padding: 0 16px; display: flex; flex-direction: column; gap: 20px; }
+    .card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .card h2 { font-size: 15px; font-weight: 600; margin-bottom: 16px; color: #1e40af; }
+    .login-box { text-align: center; padding: 40px; }
+    .login-btn { background: #2563eb; color: white; border: none; padding: 12px 28px; border-radius: 8px; font-size: 15px; cursor: pointer; }
+    label { display: block; font-size: 12px; color: #666; margin-bottom: 4px; margin-top: 10px; }
+    input, textarea, select { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; }
+    textarea { height: 60px; resize: vertical; }
+    .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; }
+    .btn-primary { background: #2563eb; color: white; }
+    .btn-success { background: #16a34a; color: white; }
+    .btn-danger  { background: #dc2626; color: white; }
+    .btn-secondary { background: #6b7280; color: white; }
+    .btn-sm { padding: 4px 10px; font-size: 12px; }
+    .btn-row { display: flex; gap: 8px; margin-top: 12px; }
+    .match-card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; margin-top: 8px; font-size: 13px; }
+    .match-card .meta { color: #6b7280; font-size: 11px; margin-top: 4px; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+    .badge-pending  { background: #fef3c7; color: #92400e; }
+    .badge-approved { background: #d1fae5; color: #065f46; }
+    .badge-rejected { background: #fee2e2; color: #991b1b; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+    .tab { padding: 6px 14px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; font-size: 13px; background: white; }
+    .tab.active { background: #2563eb; color: white; border-color: #2563eb; }
+    .section { display: none; }
+    .section.active { display: block; }
+    #result { margin-top: 12px; font-size: 12px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; white-space: pre-wrap; word-break: break-all; max-height: 120px; overflow-y: auto; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>🎓 Aingthon 테스트</h1>
+  <div id="user-info">로그인 필요</div>
+</header>
+
+<div class="container" id="app">
+  <!-- 로그인 전 -->
+  <div class="card login-box" id="login-section">
+    <p style="margin-bottom:16px;color:#6b7280;">구글 계정(대학교 이메일)으로 로그인하세요.</p>
+    <button class="login-btn" onclick="window.location.href='/oauth2/authorization/google'">Google로 로그인</button>
+  </div>
+
+  <!-- 로그인 후 -->
+  <div id="main-section" style="display:none; display:flex; flex-direction:column; gap:20px;">
+
+    <!-- Match -->
+    <div class="card">
+      <h2>매칭</h2>
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('apply')">신청하기</button>
+        <button class="tab" onclick="switchTab('sent')">보낸 신청</button>
+        <button class="tab" onclick="switchTab('received')">받은 신청</button>
+      </div>
+
+      <!-- 신청하기 -->
+      <div class="section active" id="tab-apply">
+        <label>상대방 유저 ID</label>
+        <input type="number" id="m-receiverId" placeholder="receiverId">
+        <label>신청 이유 (필수)</label>
+        <textarea id="m-reason" placeholder="어떤 것을 배우고 싶은지 작성해주세요."></textarea>
+        <label>요구사항 (선택)</label>
+        <textarea id="m-requirements" placeholder="이력서 작성, 백엔드 스터디 등"></textarea>
+        <label>선호 방식</label>
+        <select id="m-mode">
+          <option value="ONLINE">온라인</option>
+          <option value="OFFLINE">오프라인</option>
+          <option value="NO_PREFERENCE">상관없음</option>
+        </select>
+        <label>희망 일정 (선택)</label>
+        <input type="date" id="m-date">
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="applyMatch()">매칭 신청</button>
+        </div>
+        <div id="result"></div>
+      </div>
+
+      <!-- 보낸 신청 -->
+      <div class="section" id="tab-sent">
+        <div class="btn-row"><button class="btn btn-secondary" onclick="loadSent()">새로고침</button></div>
+        <div id="sent-list"></div>
+      </div>
+
+      <!-- 받은 신청 -->
+      <div class="section" id="tab-received">
+        <div class="btn-row"><button class="btn btn-secondary" onclick="loadReceived()">새로고침</button></div>
+        <div id="received-list"></div>
+      </div>
+    </div>
+
+    <!-- Schedule -->
+    <div class="card">
+      <h2>일정</h2>
+      <div class="tabs">
+        <button class="tab active" onclick="switchSchedTab('propose')">일정 제안/수정</button>
+        <button class="tab" onclick="switchSchedTab('upcoming')">예정 일정</button>
+        <button class="tab" onclick="switchSchedTab('past')">과거 일정</button>
+      </div>
+
+      <div class="section active" id="stab-propose">
+        <label>매치 ID</label>
+        <input type="number" id="s-matchId" placeholder="matchId (승인된 매치)">
+        <label>날짜</label>
+        <input type="date" id="s-date">
+        <label>시간</label>
+        <input type="time" id="s-time">
+        <label>장소</label>
+        <input type="text" id="s-location" placeholder="장소 입력">
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="proposeSchedule()">일정 제안</button>
+          <button class="btn btn-secondary" onclick="updateSchedule()">일정 수정</button>
+        </div>
+        <div id="sresult"></div>
+      </div>
+
+      <div class="section" id="stab-upcoming">
+        <div class="btn-row"><button class="btn btn-secondary" onclick="loadUpcoming()">새로고침</button></div>
+        <div id="upcoming-list"></div>
+      </div>
+
+      <div class="section" id="stab-past">
+        <div class="btn-row"><button class="btn btn-secondary" onclick="loadPast()">새로고침</button></div>
+        <div id="past-list"></div>
+      </div>
+    </div>
+
+    <!-- Chat 링크 -->
+    <div class="card">
+      <h2>채팅</h2>
+      <p style="font-size:13px;color:#6b7280;margin-bottom:12px;">WebSocket 채팅 테스트 페이지로 이동합니다.</p>
+      <button class="btn btn-secondary" onclick="window.open('/chat-test.html')">채팅 테스트 열기</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const token = localStorage.getItem('token');
+  const university = localStorage.getItem('university');
+
+  function api(method, path, body) {
+    return fetch(path, {
+      method,
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined
+    }).then(r => r.json());
+  }
+
+  function decodeJwt(t) {
+    try { return JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))); } catch { return null; }
+  }
+
+  function badgeClass(s) {
+    return s === 'PENDING' ? 'badge-pending' : s === 'APPROVED' ? 'badge-approved' : 'badge-rejected';
+  }
+
+  function renderMatch(m, showActions) {
+    const modeLabel = { ONLINE: '온라인', OFFLINE: '오프라인', NO_PREFERENCE: '상관없음' }[m.preferredMode];
+    return `
+      <div class="match-card">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <b>매치 #${m.id}</b>
+          <span class="badge ${badgeClass(m.status)}">${m.status}</span>
+        </div>
+        <div class="meta">신청자: ${m.applicantId} → 수신자: ${m.receiverId} | 방식: ${modeLabel} | 채팅방: #${m.chatRoomId}</div>
+        <div style="margin-top:6px;font-size:13px">${m.reason}</div>
+        ${m.requirements ? `<div class="meta">요구사항: ${m.requirements}</div>` : ''}
+        ${showActions && m.status === 'PENDING' ? `
+          <div class="btn-row" style="margin-top:8px">
+            <button class="btn btn-success btn-sm" onclick="approveMatch(${m.id})">승인</button>
+            <button class="btn btn-danger btn-sm" onclick="rejectMatch(${m.id})">거절</button>
+          </div>` : ''}
+      </div>`;
+  }
+
+  function renderSchedule(s) {
+    return `
+      <div class="match-card">
+        <b>일정 #${s.id}</b> (매치 #${s.matchId})
+        <div class="meta">${s.scheduledDate} ${s.scheduledTime} | 📍 ${s.location}</div>
+        <div class="meta">${s.applicantId} ↔ ${s.receiverId}</div>
+      </div>`;
+  }
+
+  // 탭 전환
+  function switchTab(name) {
+    document.querySelectorAll('#tab-apply,#tab-sent,#tab-received').forEach(el => el.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    document.querySelectorAll('.tabs')[0].querySelectorAll('.tab').forEach((t,i) => {
+      t.classList.toggle('active', ['apply','sent','received'][i] === name);
+    });
+    if (name === 'sent') loadSent();
+    if (name === 'received') loadReceived();
+  }
+
+  function switchSchedTab(name) {
+    document.querySelectorAll('#stab-propose,#stab-upcoming,#stab-past').forEach(el => el.classList.remove('active'));
+    document.getElementById('stab-' + name).classList.add('active');
+    document.querySelectorAll('.tabs')[1].querySelectorAll('.tab').forEach((t,i) => {
+      t.classList.toggle('active', ['propose','upcoming','past'][i] === name);
+    });
+    if (name === 'upcoming') loadUpcoming();
+    if (name === 'past') loadPast();
+  }
+
+  // Match API
+  async function applyMatch() {
+    const body = {
+      receiverId: Number(document.getElementById('m-receiverId').value),
+      reason: document.getElementById('m-reason').value,
+      requirements: document.getElementById('m-requirements').value || undefined,
+      preferredMode: document.getElementById('m-mode').value,
+      preferredDate: document.getElementById('m-date').value || undefined
+    };
+    const res = await api('POST', '/api/matches', body);
+    document.getElementById('result').textContent = JSON.stringify(res, null, 2);
+  }
+
+  async function loadSent() {
+    const res = await api('GET', '/api/matches/sent');
+    document.getElementById('sent-list').innerHTML = res.data?.length
+      ? res.data.map(m => renderMatch(m, false)).join('') : '<p style="color:#6b7280;font-size:13px;margin-top:8px">신청 내역이 없습니다.</p>';
+  }
+
+  async function loadReceived() {
+    const res = await api('GET', '/api/matches/received');
+    document.getElementById('received-list').innerHTML = res.data?.length
+      ? res.data.map(m => renderMatch(m, true)).join('') : '<p style="color:#6b7280;font-size:13px;margin-top:8px">받은 신청이 없습니다.</p>';
+  }
+
+  async function approveMatch(id) {
+    await api('PATCH', `/api/matches/${id}/approve`);
+    loadReceived();
+  }
+
+  async function rejectMatch(id) {
+    await api('PATCH', `/api/matches/${id}/reject`);
+    loadReceived();
+  }
+
+  // Schedule API
+  async function proposeSchedule() {
+    const body = {
+      scheduledDate: document.getElementById('s-date').value,
+      scheduledTime: document.getElementById('s-time').value + ':00',
+      location: document.getElementById('s-location').value
+    };
+    const res = await api('POST', `/api/matches/${document.getElementById('s-matchId').value}/schedule`, body);
+    document.getElementById('sresult').textContent = JSON.stringify(res, null, 2);
+  }
+
+  async function updateSchedule() {
+    const body = {
+      scheduledDate: document.getElementById('s-date').value,
+      scheduledTime: document.getElementById('s-time').value + ':00',
+      location: document.getElementById('s-location').value
+    };
+    const res = await api('PUT', `/api/matches/${document.getElementById('s-matchId').value}/schedule`, body);
+    document.getElementById('sresult').textContent = JSON.stringify(res, null, 2);
+  }
+
+  async function loadUpcoming() {
+    const res = await api('GET', '/api/matches/schedules/upcoming');
+    document.getElementById('upcoming-list').innerHTML = res.data?.length
+      ? res.data.map(renderSchedule).join('') : '<p style="color:#6b7280;font-size:13px;margin-top:8px">예정된 일정이 없습니다.</p>';
+  }
+
+  async function loadPast() {
+    const res = await api('GET', '/api/matches/schedules/past');
+    document.getElementById('past-list').innerHTML = res.data?.length
+      ? res.data.map(renderSchedule).join('') : '<p style="color:#6b7280;font-size:13px;margin-top:8px">과거 일정이 없습니다.</p>';
+  }
+
+  // Init
+  if (token) {
+    const payload = decodeJwt(token);
+    document.getElementById('login-section').style.display = 'none';
+    document.getElementById('main-section').style.display = 'flex';
+    document.getElementById('user-info').innerHTML =
+      `${payload?.sub} · ${university} <button class="logout-btn" onclick="logout()">로그아웃</button>`;
+  }
+
+  function logout() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('university');
+    window.location.reload();
+  }
+</script>
+</body>
+</html>
